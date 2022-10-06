@@ -1,20 +1,17 @@
+import json
+import sys
+import urllib.request
 
-
+import requests
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
-from PIL import Image
-from datetime import datetime
-from style import StyleWindow
-import sys
-import requests 
-import json 
-import urllib.request
 
+from style import StyleWindow
 
 
 class Main:
-    def __init__(self,root):
+    def __init__(self, root):
         self.root = root
         self.class_style = StyleWindow(self.root)
 
@@ -22,38 +19,33 @@ class Main:
         self.API = '06051f3cad0ad7ba821ba795bf6d124f'
         self.list_country = list()
         self.check = ""
-       
+        self.is_guide_shown = True
 
-        self.add_search()
-        self.add_button()
+        self.add_search_field()
+        self.add_search_button()
         self.read_country()
 
-    def add_search(self):
+    def add_search_field(self):
         """ Add QLineEdit """
-        self.search_city = QLineEdit(self.root)
-        self.search_city.move(230,70)
-        self.search_city.resize(500,50)
-        self.search_city.setStyleSheet("font-size:30px; background-color:white ;color:black; border: 2px solid red; border-radius: 23px 23px;")
-        self.search_city.setAlignment(Qt.AlignCenter)
+        self.search_field = QLineEdit(self.root)
+        self.search_field.move(200, 70)
+        self.search_field.resize(500, 50)
+        self.search_field.setStyleSheet("font-size:24px; background-color:white; padding: 0 15px; border:2px solid gray; border-radius:23px 23px;")
+        self.search_field.returnPressed.connect(self.check_connection)
 
-
-    def add_button(self):
-        self.button_data = QPushButton(self.root)
-        self.button_data.move(650,75)
-        self.button_data.resize(40,40)
-        self.button_data.setStyleSheet("background-color:white;border:0px;")
-
-        self.button_data.setIcon(QIcon("images//get_data.png"))
-        self.button_data.setIconSize(QSize(90,90))
-        self.button_data.setToolTip("أنقر لجلب معلومات الطقس") 
-
-        self.button_data.clicked.connect(self.check_connection)
-
-
+    def add_search_button(self):
+        self.search_button = QPushButton(self.root)
+        self.search_button.move(645, 75)
+        self.search_button.resize(40, 40)
+        self.search_button.setStyleSheet("background-color:white; border:0px;")
+        self.search_button.setIcon(QIcon("images//get_data.png"))
+        self.search_button.setIconSize(QSize(40, 40))
+        self.search_button.setToolTip("Click search to get weather")
+        self.search_button.clicked.connect(self.check_connection)
 
     def read_country(self):
-        """ Read All Data Coun """
-        with open('country.json',mode='r') as self.data :
+        """ Read All Data """
+        with open('country.json', mode='r') as self.data:
             self.data = json.loads(self.data.read())
 
             for self.section in self.data['countries']:
@@ -61,35 +53,32 @@ class Main:
                     self.list_country.append(self.city_name)
 
         self.completer = QCompleter(self.list_country)
-        self.search_city.setCompleter(self.completer)
-
-
+        self.completer.setCaseSensitivity(0)
+        self.search_field.setCompleter(self.completer)
 
     def check_connection(self):
         """Verify the device is connected to the Internet"""
-        self.url_website = 'https://openweathermap.org/'
+        self.weather_api_url = 'https://openweathermap.org/'
         self.timeout = 5
-        try :
-            request = requests.get(self.url_website, timeout=self.timeout)
-            if request :
-                if self.search_city.text() == "":
-                    return QMessageBox.warning(self.root,"خطأ","لا يمكن ترك الحقل فارغاً",QMessageBox.Yes)
+        try:
+            request = requests.get(self.weather_api_url, timeout=self.timeout)
+            if request:
+                if self.search_field.text() == "":
+                    return QMessageBox.warning(self.root, "Error", "You can't leave this field empty!", QMessageBox.Yes)
                 self.get_data()
-               
-        except (requests.ConnectionError, requests.Timeout) as exception:
-            self.message_connection = QMessageBox.warning(self.root,"خطأ","الرجاء التحقق من شبكة الإنترنت",QMessageBox.Yes)
 
+        except (requests.ConnectionError, requests.Timeout) as exception:
+            self.message_connection = QMessageBox.warning(self.root, "Error", "Please check your network!", QMessageBox.Yes)
 
     def get_data(self):
         """The Function Get Data And , Verify the device is connected to the Internet"""
 
-        self.url_api = requests.get(self.URL.format(self.search_city.text(),self.API))
+        self.weather_api_data = requests.get(self.URL.format(self.search_field.text(), self.API))
 
-        if self.url_api :
-            self.jsonData = self.url_api.json()
+        if self.weather_api_data:
+            self.jsonData = self.weather_api_data.json()
             self.city = self.jsonData['name']
             self.country = self.jsonData['sys']['country']
-
             self.temp_klv = self.jsonData['main']['temp']
             self.temp_celcuis = (self.temp_klv - 273.15)
             self.temp_fehr = (self.temp_klv - 273.15) * 9 / 5 + 32
@@ -101,57 +90,49 @@ class Main:
 
             self.final_result = (
                 self.city, self.country, self.temp_klv, self.temp_celcuis,
-                self.temp_fehr, self.weather, self.pressure, self.description, self.humidity,
-                self.wind 
+                self.temp_fehr, self.weather, self.pressure, self.wind, self.humidity,
+                self.description
             )
 
-            if self.final_result :
+            if self.final_result:
                 self.show_data()
-                
-
 
     def show_data(self):
-        self.class_style.label_1.setText(self.final_result[0] + '-' + self.final_result[1]) 
-        self.class_style.label_2.setText(('{:.0f}°C , {:.0f}°F'.format(self.final_result[3],self.final_result[4])))
-        self.class_style.label_3.setText(str(self.final_result[6]))
-        self.class_style.label_4.setText(str(self.final_result[7]))
-        self.class_style.label_5.setText(str(self.final_result[8]))
+        if self.is_guide_shown:
+            self.class_style.label_guide.deleteLater()
+            self.is_guide_shown = False
+
+        self.class_style.location.setText(self.final_result[0] + '-' + self.final_result[1])
+        self.class_style.temperature.setText(('{:.0f}°C , {:.0f}°F'.format(self.final_result[3], self.final_result[4])))
+        self.class_style.pressure.setText(str(self.final_result[6]))
+        self.class_style.humidity.setText(str(self.final_result[7]) + '%')
+        self.class_style.wind.setText(str(self.final_result[8]))
 
         self.class_style.label_weather_now.setText('{:.0f}°C'.format(self.final_result[3]))
-        self.class_style.label_weather_now.setStyleSheet("background-color:#1b1b1b; color:red; font-size:22px")
-        self.class_style.label_weather_now.move(700,250)
-        self.class_style.label_weather_now.resize(55,22)
-        self.class_style.label_6.setText(str(self.final_result[9]))
-
-
-        self.class_style.label_weather.setText("WEATHER TODAY")
-        self.class_style.label_weather.move(120,300)
-        self.class_style.label_weather.resize(220,44)
-        self.class_style.label_weather.setStyleSheet("background-color:#1b1b1b; color:white;font-size:22px")
-
-
+        self.class_style.label_weather_now.setStyleSheet("background-color:#333; color:cyan; font-size:22px")
+        self.class_style.label_weather_now.move(580, 340)
+        self.class_style.label_weather_now.resize(55, 22)
+        self.class_style.description.setText(str(self.final_result[9]))
 
         self.get_icon()
-
-
 
     def get_icon(self):
         """Get Icon Current Weather!"""
 
-        self.data = requests.get(self.URL.format(self.search_city.text(),self.API))
+        self.data = requests.get(self.URL.format(self.search_field.text(), self.API))
         self.file_josn = self.data.json()
         self.icon = self.file_josn['weather'][0]['icon']
         urllib.request.urlretrieve(f'http://openweathermap.org/img/wn/{self.icon}.png', 'images\\image_weather.png')
 
-        self.pixmap = QPixmap("images\\image_weather.png").scaled(160,160)
+        self.pixmap = QPixmap("images\\image_weather.png").scaled(160, 160)
         self.class_style.label_icon.setPixmap(self.pixmap)
-        self.class_style.label_icon.move(550,250)
-        self.class_style.label_icon.resize(220,120)
-        
+        self.class_style.label_icon.move(450, 340)
+        self.class_style.label_icon.resize(220, 120)
+
 
 if __name__ == '__main__':
-    appliaction = QApplication(sys.argv)
+    application = QApplication(sys.argv)
     window = QWidget()
     class_style = Main(window)
     window.show()
-    sys.exit(appliaction.exec_())
+    sys.exit(application.exec_())
