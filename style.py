@@ -10,9 +10,12 @@ class StyleWindow:
         self.root.setWindowIcon(QIcon('images\\icon_app.ico'))
         self.root.setFixedWidth(900)
         self.root.setFixedHeight(700)
+
+
         self.add_logo()
         self.add_box()
         self.add_titles()
+
 
     def add_logo(self):
         self.label_image_logo = QLabel(self.root)

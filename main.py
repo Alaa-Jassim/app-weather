@@ -8,6 +8,7 @@ from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 
 from style import StyleWindow
+import threading
 
 
 class Main:
@@ -20,6 +21,7 @@ class Main:
         self.list_country = list()
         self.check = ""
         self.is_guide_shown = True
+
 
         self.add_search_field()
         self.add_search_button()
@@ -65,10 +67,13 @@ class Main:
             if request:
                 if self.search_field.text() == "":
                     return QMessageBox.warning(self.root, "Error", "You can't leave this field empty!", QMessageBox.Yes)
-                self.get_data()
+                #self.get_data()
+                self.thread_get_data = threading.Thread(target=self.get_data,args=()).start()
 
         except (requests.ConnectionError, requests.Timeout) as exception:
             self.message_connection = QMessageBox.warning(self.root, "Error", "Please check your network!", QMessageBox.Yes)
+
+    
 
     def get_data(self):
         """The Function Get Data And , Verify the device is connected to the Internet"""
@@ -95,7 +100,9 @@ class Main:
             )
 
             if self.final_result:
-                self.show_data()
+               self.thread_show_data = threading.Thread(target=self.show_data,args=()).start()
+
+    
 
     def show_data(self):
         if self.is_guide_shown:
@@ -114,7 +121,8 @@ class Main:
         self.class_style.label_weather_now.resize(55, 22)
         self.class_style.description.setText(str(self.final_result[9]))
 
-        self.get_icon()
+    
+        self.thread_get_icon = threading.Thread(target=self.get_icon,args=()).start()
 
     def get_icon(self):
         """Get Icon Current Weather!"""
